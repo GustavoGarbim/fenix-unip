@@ -50,7 +50,7 @@ const pillars = [
       <div class="relative mx-auto w-full max-w-7xl px-5 py-24 sm:px-8 lg:py-0">
         <div class="max-w-3xl animate-fade-up">
           <span class="section-label">Atlética Oficial UNIP</span>
-          <h1 class="mt-6 font-display text-6xl leading-[0.88] tracking-wide sm:text-7xl lg:text-8xl">
+          <h1 class="mt-6 font-display text-6xl leading-[1.15] tracking-wide sm:text-7xl lg:text-8xl">
             NASCIDOS NO FOGO,
             <br />
             <span class="text-fenix-orange">FORJADOS NA VITÓRIA.</span>
@@ -73,8 +73,8 @@ const pillars = [
             </RouterLink>
           </div>
 
-          <div class="mt-16 flex flex-wrap gap-x-10 gap-y-6">
-            <div v-for="(s, i) in stats" :key="s.label" :class="i % 2 === 1 ? 'sm:mt-3' : ''">
+          <div class="mt-16 grid grid-cols-2 gap-x-8 gap-y-6 sm:grid-cols-4 sm:gap-x-10">
+            <div v-for="s in stats" :key="s.label">
               <p class="font-display text-4xl text-fenix-gold">{{ s.value }}</p>
               <p class="mt-1 text-xs uppercase tracking-wider text-white/50">{{ s.label }}</p>
             </div>
@@ -100,7 +100,6 @@ const pillars = [
           :to="p.to"
           class="card group animate-fade-up flex flex-col gap-5 p-8"
           :style="{ animationDelay: `${i * 0.1}s` }"
-          :class="i % 2 === 1 ? 'md:mt-6' : ''"
         >
           <div class="flex h-14 w-14 items-center justify-center border-2 border-fenix-orange/40 bg-fenix-orange/10 transition-colors duration-300 group-hover:bg-fenix-orange/20">
             <svg class="h-7 w-7 text-fenix-orange" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
