@@ -8,7 +8,7 @@ import MarqueeBanner from '../components/MarqueeBanner.vue'
 const stats = [
   { value: '1.2k+', label: 'Sócios Ativos' },
   { value: '14', label: 'Modalidades' },
-  { value: '38', label: 'Títulos Conquistados' },
+  { value: '38', label: 'Títulos' },
   { value: '+92%', label: 'Engajamento Digital' },
 ]
 
@@ -49,7 +49,7 @@ const pillars = [
 
       <div class="relative mx-auto w-full max-w-7xl px-5 py-24 sm:px-8 lg:py-0">
         <div class="max-w-3xl animate-fade-up">
-          <span class="section-label">Atlética Oficial UNIP</span>
+          <span class="section-label mt-8">Atlética Oficial UNIP</span>
           <h1 class="mt-6 font-display text-6xl leading-[1.15] tracking-wide sm:text-7xl lg:text-8xl">
             NASCIDOS NO FOGO,
             <br />
@@ -73,7 +73,7 @@ const pillars = [
             </RouterLink>
           </div>
 
-          <div class="mt-16 grid grid-cols-2 gap-x-8 gap-y-6 sm:grid-cols-4 sm:gap-x-10">
+          <div class="mt-16 mb-10 grid grid-cols-2 gap-x-5 gap-y-6 sm:grid-cols-4 sm:gap-x-6">
             <div v-for="s in stats" :key="s.label">
               <p class="font-display text-4xl text-fenix-gold">{{ s.value }}</p>
               <p class="mt-1 text-xs uppercase tracking-wider text-white/50">{{ s.label }}</p>
