@@ -1,6 +1,7 @@
 <script setup>
 import { reactive, ref } from 'vue'
 import { useDemoMode } from '../composables/useDemoMode'
+import { post } from '../services/api'
 
 const { triggerDemo } = useDemoMode()
 
@@ -13,8 +14,33 @@ const form = reactive({
   message: '',
 })
 
-function submitSuggestion() {
-  triggerDemo('Enviar Sugestão')
+const sending = ref(false)
+const feedback = ref('')
+
+async function submitSuggestion() {
+  sending.value = true
+  feedback.value = ''
+  try {
+    await post(
+      '/sugestoes',
+      {
+        nomeAutor: form.name?.trim() || null,
+        email: form.email?.trim() || null,
+        categoria: activeTopic.value,
+        mensagem: form.message,
+      },
+      { auth: false }
+    )
+    triggerDemo('Enviar Sugestão')
+    feedback.value = 'Sugestão enviada com sucesso!'
+    form.name = ''
+    form.email = ''
+    form.message = ''
+  } catch (err) {
+    feedback.value = err.message || 'Não foi possível enviar sua sugestão. Tente novamente.'
+  } finally {
+    sending.value = false
+  }
 }
 </script>
 
@@ -81,8 +107,10 @@ function submitSuggestion() {
           />
         </div>
 
-        <button type="submit" class="btn-fire w-full !py-3.5 !text-base">
-          <span class="btn-label">Enviar Sugestão</span>
+        <p v-if="feedback" class="text-sm font-medium text-white/70">{{ feedback }}</p>
+
+        <button type="submit" class="btn-fire w-full !py-3.5 !text-base" :disabled="sending">
+          <span class="btn-label">{{ sending ? 'Enviando...' : 'Enviar Sugestão' }}</span>
         </button>
       </form>
     </div>

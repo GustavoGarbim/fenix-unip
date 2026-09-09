@@ -1,70 +1,69 @@
-import { ref, watch } from 'vue'
-import postBeneficente from '../img/post-acao-beneficente.jpg'
-import postMonster from '../img/post-monster-energy.jpg'
+import { ref } from 'vue'
+import { get, post, del } from '../services/api'
 
-const STORAGE_KEY = 'fenix-news-posts'
-
-function loadPosts() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    if (raw) return JSON.parse(raw)
-  } catch {
-    // ignore malformed storage
+function mapFromApi(n) {
+  return {
+    id: n.id ?? n.Id,
+    title: n.titulo ?? n.Titulo ?? null,
+    summary: n.resumo ?? n.Resumo ?? n.conteudo ?? n.Conteudo ?? '',
+    author: n.autor ?? n.Autor ?? 'Diretoria Fênix',
+    date: (n.dataPublicacao ?? n.DataPublicacao ?? '').slice(0, 10) || new Date().toISOString().slice(0, 10),
+    image: n.imagemUrl ?? n.ImagemUrl ?? null,
+    likes: n.curtidas ?? n.Curtidas ?? 0,
   }
-  return [
-    {
-      id: 2,
-      title: null,
-      summary:
-        'Quem nasce no fogo, bebe Monster! Vem aí mais uma confraternização da Fênix com direito a energia de sobra. Anota na agenda e chama a galera. 🔥',
-      author: 'Diretoria Fênix',
-      date: '2026-08-24',
-      image: postMonster,
-      likes: 214,
-    },
-    {
-      id: 1,
-      title: null,
-      summary:
-        'Nossa atlética está apoiando a Ação Beneficente do CEU Pêra Marmelo! Entrada com 1kg de alimento não perecível. Vamos com tudo apoiar essa causa. 🧡',
-      author: 'Diretoria Fênix',
-      date: '2026-08-20',
-      image: postBeneficente,
-      likes: 158,
-    },
-  ]
 }
 
-const posts = ref(loadPosts())
+const posts = ref([])
 
-watch(
-  posts,
-  (value) => {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(value))
-    } catch {
-      // storage quota exceeded (e.g. very large images) — post still lives in memory for this session
+async function fetchPosts() {
+  try {
+    const data = await get('/noticias', { auth: false })
+    if (Array.isArray(data)) {
+      posts.value = data.map(mapFromApi).sort((a, b) => (a.date < b.date ? 1 : -1))
     }
-  },
-  { deep: true }
-)
+  } catch {
+    // mantém a lista atual (vazia) em caso de falha ao buscar
+  }
+}
+
+fetchPosts()
 
 export function useNews() {
-  function addPost({ summary, author, image }) {
-    posts.value.unshift({
-      id: Date.now(),
-      title: null,
-      summary,
-      author: author?.trim() || 'Diretoria Fênix',
-      date: new Date().toISOString().slice(0, 10),
-      image: image || null,
-      likes: 0,
-    })
+  async function addPost({ summary, author, image }) {
+    const payload = {
+      titulo: null,
+      resumo: summary,
+      conteudo: summary,
+      imagemUrl: image || null,
+    }
+    try {
+      const created = await post('/noticias', payload)
+      posts.value.unshift(
+        mapFromApi(created) ?? {
+          id: Date.now(),
+          title: null,
+          summary,
+          author: author?.trim() || 'Diretoria Fênix',
+          date: new Date().toISOString().slice(0, 10),
+          image: image || null,
+          likes: 0,
+        }
+      )
+    } catch (err) {
+      console.error('Falha ao publicar notícia:', err.message)
+    }
   }
 
-  function deletePost(id) {
+  async function deletePost(id) {
+    const previous = posts.value
     posts.value = posts.value.filter((p) => p.id !== id)
+    try {
+      await del(`/noticias/${id}`)
+    } catch (err) {
+      posts.value = previous
+      console.error('Falha ao excluir notícia:', err.message)
+    }
   }
 
-  return { posts, addPost, deletePost }
+  return { posts, addPost, deletePost, fetchPosts }
 }

@@ -44,7 +44,6 @@ function statusClasses(status) {
     <p class="mt-3 max-w-lg text-white/60">Perfil, mensalidade e carteirinha digital em um dashboard exclusivo para sócios.</p>
 
     <div class="mt-12 grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
-      <!-- Digital Card -->
       <div class="animate-fade-up">
         <div class="relative overflow-hidden border-4 border-black bg-fire-gradient p-8 shadow-ember-lg">
           <div class="absolute -right-10 -top-10 h-48 w-48 rounded-full bg-white/10 blur-2xl" />
@@ -109,7 +108,6 @@ function statusClasses(status) {
         </div>
       </div>
 
-      <!-- Status & timeline -->
       <div class="animate-fade-up flex flex-col gap-6" style="animation-delay: 0.1s">
         <div class="card p-6">
           <div class="flex items-center justify-between">

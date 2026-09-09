@@ -9,8 +9,9 @@ const { login } = useAdminAuth()
 const form = reactive({ username: '', password: '' })
 const error = ref('')
 
-function submit() {
-  if (login(form.username.trim(), form.password)) {
+async function submit() {
+  const ok = await login(form.username.trim(), form.password)
+  if (ok) {
     error.value = ''
     router.push('/admin')
   } else {
@@ -31,13 +32,13 @@ function submit() {
 
     <form class="card mt-10 space-y-4 p-6 sm:p-8" @submit.prevent="submit">
       <div>
-        <label class="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-white/50">Usuário</label>
+        <label class="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-white/50">E-mail</label>
         <input
           v-model="form.username"
-          type="text"
+          type="email"
           required
           autocomplete="username"
-          placeholder="admin"
+          placeholder="admin@fenixunip.com.br"
           class="w-full border-2 border-white/15 bg-white/5 px-4 py-3 text-sm text-white placeholder-white/30 outline-none transition focus:border-fenix-orange/60 focus:bg-white/10"
         />
       </div>
@@ -57,7 +58,7 @@ function submit() {
 
       <button type="submit" class="btn-fire w-full !py-3.5 !text-base"><span class="btn-label">Entrar</span></button>
 
-      <p class="pt-1 text-center text-xs text-white/30">Demo: usuário <code>admin</code> &middot; senha <code>fenix2026</code></p>
+      <p class="pt-1 text-center text-xs text-white/30">Acesso com as credenciais cadastradas pela diretoria.</p>
     </form>
   </div>
 </template>

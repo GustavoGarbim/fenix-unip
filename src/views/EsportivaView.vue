@@ -1,26 +1,73 @@
 <script setup>
-import { reactive } from 'vue'
+import { onMounted, reactive, ref } from 'vue'
 import { useDemoMode } from '../composables/useDemoMode'
+import { get, post } from '../services/api'
 
 const { triggerDemo } = useDemoMode()
 
-const events = [
-  { day: '02', month: 'SET', title: 'Treino de Futsal', type: 'Treino', time: '19h00', place: 'Ginásio UNIP' },
-  { day: '05', month: 'SET', title: 'Vôlei vs. Atlética Titans', type: 'Jogo', time: '15h00', place: 'Arena Central' },
-  { day: '09', month: 'SET', title: 'Treino de Handebol', type: 'Treino', time: '20h00', place: 'Ginásio UNIP' },
-  { day: '13', month: 'SET', title: 'Basquete vs. Fúria FC', type: 'Jogo', time: '17h30', place: 'Ginásio Anexo' },
-  { day: '18', month: 'SET', title: 'Treino Funcional', type: 'Treino', time: '18h30', place: 'Quadra 2' },
-  { day: '21', month: 'SET', title: 'Final da Copa Interatléticas', type: 'Jogo', time: '14h00', place: 'Arena Central' },
-]
+const monthAbbrev = ['JAN', 'FEV', 'MAR', 'ABR', 'MAI', 'JUN', 'JUL', 'AGO', 'SET', 'OUT', 'NOV', 'DEZ']
 
-const modalities = ['Futsal', 'Vôlei', 'Basquete', 'Handebol', 'Atletismo', 'Judô']
+const events = ref([])
+const modalidades = ref([])
+const modalities = ref([])
+
+const loadingAgenda = ref(false)
+
+function mapEvent(e) {
+  const dataHora = e.dataHora ?? e.DataHora
+  const d = dataHora ? new Date(dataHora) : null
+  return {
+    id: e.id ?? e.Id,
+    day: d ? String(d.getDate()).padStart(2, '0') : '--',
+    month: d ? monthAbbrev[d.getMonth()] : '',
+    title: e.titulo ?? e.Titulo ?? '',
+    type: e.tipoEvento ?? e.TipoEvento ?? 'Evento',
+    time: d ? d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '',
+    place: e.local ?? e.Local ?? '',
+  }
+}
+
+function mapModalidade(m) {
+  return {
+    id: m.id ?? m.Id,
+    nome: m.nome ?? m.Nome,
+  }
+}
+
+async function fetchAgenda() {
+  loadingAgenda.value = true
+  try {
+    const [eventosData, modalidadesData] = await Promise.all([
+      get('/eventos', { auth: false }),
+      get('/modalidades', { auth: false }),
+    ])
+    if (Array.isArray(eventosData)) {
+      events.value = eventosData.map(mapEvent)
+    }
+    if (Array.isArray(modalidadesData)) {
+      modalidades.value = modalidadesData.map(mapModalidade)
+      modalities.value = modalidades.value.map((m) => m.nome)
+    }
+  } catch {
+    events.value = []
+    modalities.value = []
+  } finally {
+    loadingAgenda.value = false
+  }
+}
+
+onMounted(fetchAgenda)
 
 const form = reactive({
   name: '',
+  email: '',
   ra: '',
   modality: '',
   experience: '',
 })
+
+const submitting = ref(false)
+const submitFeedback = ref('')
 
 function typeClasses(type) {
   return type === 'Jogo'
@@ -28,8 +75,34 @@ function typeClasses(type) {
     : 'border-2 border-white/15 bg-white/5 text-white/70'
 }
 
-function submitTryout() {
-  triggerDemo('Faça parte da Bateria')
+async function submitTryout() {
+  const selected = modalidades.value.find((m) => m.nome === form.modality)
+  submitting.value = true
+  submitFeedback.value = ''
+  try {
+    await post(
+      '/tryouts',
+      {
+        modalidadeId: selected?.id ?? null,
+        nomeCandidato: form.name,
+        email: form.email,
+        ra: form.ra,
+        mensagem: form.experience || null,
+      },
+      { auth: false }
+    )
+    triggerDemo('Faça parte da Bateria')
+    submitFeedback.value = 'Inscrição enviada com sucesso!'
+    form.name = ''
+    form.email = ''
+    form.ra = ''
+    form.modality = ''
+    form.experience = ''
+  } catch (err) {
+    submitFeedback.value = err.message || 'Não foi possível enviar sua inscrição. Tente novamente.'
+  } finally {
+    submitting.value = false
+  }
 }
 </script>
 
@@ -42,17 +115,20 @@ function submitTryout() {
     <p class="mt-3 max-w-lg text-white/60">Acompanhe a agenda oficial da Fênix e faça parte da bateria disputando uma vaga no time.</p>
 
     <div class="mt-12 grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
-      <!-- Calendar / agenda -->
       <div class="animate-fade-up card p-6 sm:p-8">
         <div class="flex items-center justify-between">
           <p class="font-display text-lg tracking-wide">Próximos Compromissos</p>
           <span class="section-label">Setembro 2026</span>
         </div>
 
+        <p v-if="!loadingAgenda && events.length === 0" class="mt-6 text-sm text-white/50">
+          Nenhum evento agendado no momento.
+        </p>
+
         <ul class="mt-6 space-y-3">
           <li
             v-for="e in events"
-            :key="e.title + e.day"
+            :key="e.id ?? e.title + e.day"
             class="group flex items-center gap-4 border-2 border-white/10 bg-white/[0.02] p-4 transition-all duration-300 hover:border-fenix-orange/40 hover:bg-white/[0.05]"
           >
             <div class="flex h-14 w-14 shrink-0 flex-col items-center justify-center border-2 border-white/10 bg-black/40 text-center">
@@ -70,7 +146,6 @@ function submitTryout() {
         </ul>
       </div>
 
-      <!-- Tryout form -->
       <div class="animate-fade-up card p-6 sm:p-8" style="animation-delay: 0.1s">
         <p class="font-display text-lg tracking-wide">Faça Parte da Bateria</p>
         <p class="mt-1 text-sm text-white/50">Preencha seus dados e mostre sua garra na próxima seletiva da Fênix.</p>
@@ -83,6 +158,16 @@ function submitTryout() {
               type="text"
               required
               placeholder="Seu nome"
+              class="w-full border-2 border-white/15 bg-white/5 px-4 py-3 text-sm text-white placeholder-white/30 outline-none transition focus:border-fenix-orange/60 focus:bg-white/10"
+            />
+          </div>
+          <div>
+            <label class="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-white/50">E-mail</label>
+            <input
+              v-model="form.email"
+              type="email"
+              required
+              placeholder="voce@email.com"
               class="w-full border-2 border-white/15 bg-white/5 px-4 py-3 text-sm text-white placeholder-white/30 outline-none transition focus:border-fenix-orange/60 focus:bg-white/10"
             />
           </div>
@@ -117,8 +202,10 @@ function submitTryout() {
             />
           </div>
 
-          <button type="submit" class="btn-fire w-full !py-3.5 !text-base">
-            <span class="btn-label">Faça Parte da Bateria</span>
+          <p v-if="submitFeedback" class="text-sm font-medium text-white/70">{{ submitFeedback }}</p>
+
+          <button type="submit" class="btn-fire w-full !py-3.5 !text-base" :disabled="submitting">
+            <span class="btn-label">{{ submitting ? 'Enviando...' : 'Faça Parte da Bateria' }}</span>
           </button>
         </form>
       </div>

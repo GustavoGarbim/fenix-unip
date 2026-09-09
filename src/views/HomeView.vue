@@ -38,7 +38,6 @@ const pillars = [
   <div>
     <MarqueeBanner />
 
-    <!-- HERO -->
     <section class="relative flex min-h-[88vh] items-center overflow-hidden border-b-2 border-fenix-red/40">
       <div class="absolute inset-0 -z-20 bg-black">
         <img :src="heroBg" alt="" class="h-full w-full object-cover opacity-50 grayscale contrast-125" />
@@ -83,7 +82,6 @@ const pillars = [
       </div>
     </section>
 
-    <!-- PILLARS -->
     <section class="mx-auto max-w-7xl px-5 py-24 sm:px-8">
       <div class="max-w-2xl">
         <span class="section-label">O Ecossistema Fênix</span>
@@ -120,7 +118,6 @@ const pillars = [
       </div>
     </section>
 
-    <!-- VIDEO -->
     <section class="mx-auto max-w-7xl px-5 py-24 sm:px-8">
       <div class="grid gap-12 lg:grid-cols-[0.8fr_1.2fr] lg:items-center">
         <div class="animate-fade-up justify-self-center">
@@ -153,7 +150,6 @@ const pillars = [
       </div>
     </section>
 
-    <!-- CTA BANNER -->
     <section class="relative overflow-hidden border-y-2 border-fenix-red/40 bg-fenix-ember py-24">
       <div class="absolute -left-24 top-0 h-72 w-72 rounded-full bg-fenix-red/20 blur-[100px]" />
       <div class="absolute -right-24 bottom-0 h-72 w-72 rounded-full bg-fenix-orange/15 blur-[100px]" />

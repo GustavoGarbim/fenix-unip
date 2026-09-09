@@ -1,27 +1,56 @@
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useDemoMode } from '../composables/useDemoMode'
+import { get } from '../services/api'
 
 const { triggerDemo } = useDemoMode()
 
 const categories = ['Todos', 'Moletons', 'Camisas', 'Canecas', 'Acessórios']
 const activeCategory = ref('Todos')
 
-const products = [
-  { id: 1, name: 'Moletom Fênix Oficial', category: 'Moletons', price: 189.9, badge: 'Mais Vendido', emoji: '🧥' },
-  { id: 2, name: 'Camisa de Jogo Fênix', category: 'Camisas', price: 129.9, badge: 'Novo', emoji: '👕' },
-  { id: 3, name: 'Caneca Renascer', category: 'Canecas', price: 44.9, badge: null, emoji: '☕' },
-  { id: 4, name: 'Tirante Oficial Fênix', category: 'Acessórios', price: 24.9, badge: null, emoji: '🎗️' },
-  { id: 5, name: 'Moletom Canguru Fogo', category: 'Moletons', price: 199.9, badge: 'Edição Limitada', emoji: '🧥' },
-  { id: 6, name: 'Camisa Treino Dry-Fit', category: 'Camisas', price: 99.9, badge: null, emoji: '👕' },
-  { id: 7, name: 'Caneca Térmica Fênix', category: 'Canecas', price: 69.9, badge: null, emoji: '☕' },
-  { id: 8, name: 'Boné Aba Reta Fênix', category: 'Acessórios', price: 79.9, badge: 'Novo', emoji: '🧢' },
-]
+const emojiByCategory = {
+  Moletons: '🧥',
+  Camisas: '👕',
+  Canecas: '☕',
+  Acessórios: '🎗️',
+}
+
+const products = ref([])
+const loadingProducts = ref(false)
+
+function mapProduct(p) {
+  const category = p.categoria ?? p.Categoria ?? 'Acessórios'
+  return {
+    id: p.id ?? p.Id,
+    name: p.nome ?? p.Nome,
+    category,
+    price: Number(p.preco ?? p.Preco ?? 0),
+    badge: null,
+    emoji: emojiByCategory[category] || '🛍️',
+    imagemUrl: p.imagemUrl ?? p.ImagemUrl ?? null,
+  }
+}
+
+async function fetchProducts() {
+  loadingProducts.value = true
+  try {
+    const data = await get('/produtos', { auth: false })
+    if (Array.isArray(data)) {
+      products.value = data.map(mapProduct)
+    }
+  } catch {
+    products.value = []
+  } finally {
+    loadingProducts.value = false
+  }
+}
+
+onMounted(fetchProducts)
 
 const filtered = computed(() =>
   activeCategory.value === 'Todos'
-    ? products
-    : products.filter((p) => p.category === activeCategory.value)
+    ? products.value
+    : products.value.filter((p) => p.category === activeCategory.value)
 )
 
 const cartCount = ref(0)
@@ -140,6 +169,10 @@ function tiltFor(i) {
         </div>
       </div>
     </TransitionGroup>
+
+    <div v-if="!loadingProducts && filtered.length === 0" class="card mt-10 p-10 text-center text-white/50">
+      Nenhum produto disponível nesta categoria.
+    </div>
   </div>
 </template>
 

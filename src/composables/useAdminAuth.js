@@ -1,24 +1,27 @@
 import { ref } from 'vue'
+import { post, ADMIN_TOKEN_KEY } from '../services/api'
 
-const STORAGE_KEY = 'fenix-admin-session'
-export const DEMO_USER = 'admin'
-export const DEMO_PASS = 'fenix2026'
-
-const isAdmin = ref(localStorage.getItem(STORAGE_KEY) === 'true')
+const isAdmin = ref(!!localStorage.getItem(ADMIN_TOKEN_KEY))
 
 export function useAdminAuth() {
-  function login(username, password) {
-    const ok = username === DEMO_USER && password === DEMO_PASS
-    if (ok) {
-      isAdmin.value = true
-      localStorage.setItem(STORAGE_KEY, 'true')
+  async function login(email, senha) {
+    try {
+      const data = await post('/auth/admin/login', { email, senha }, { auth: false })
+      if (data?.token) {
+        localStorage.setItem(ADMIN_TOKEN_KEY, data.token)
+        isAdmin.value = true
+        return true
+      }
+      return false
+    } catch {
+      isAdmin.value = false
+      return false
     }
-    return ok
   }
 
   function logout() {
     isAdmin.value = false
-    localStorage.removeItem(STORAGE_KEY)
+    localStorage.removeItem(ADMIN_TOKEN_KEY)
   }
 
   return { isAdmin, login, logout }
