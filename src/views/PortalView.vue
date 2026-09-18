@@ -1,14 +1,19 @@
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import QRCode from 'qrcode'
 import logo from '../img/fenix-unip.jpg'
 import { useAuth } from '../composables/useAuth'
 import { useDemoMode } from '../composables/useDemoMode'
+import { useEventos } from '../composables/useEventos'
+import { useCheckIns } from '../composables/useCheckIns'
 import { get, put } from '../services/api'
 
 const router = useRouter()
 const { user, logout } = useAuth()
 const { notify } = useDemoMode()
+const { eventos, fetchEventos } = useEventos()
+const { gerarQrCode, fetchMeusSelos } = useCheckIns()
 
 const perks = [
   'Entrada gratuita em jogos oficiais',
@@ -243,7 +248,91 @@ function trocarConta() {
   router.push('/login')
 }
 
-onMounted(loadPortalData)
+// ---------- Meu QR Code do Jogo ----------
+const loadingEventos = ref(true)
+const eventoSelecionadoId = ref('')
+const gerandoQrCode = ref(false)
+const qrCodeError = ref('')
+const qrDataUrl = ref('')
+const qrCodeInfo = reactive({
+  eventoTitulo: '',
+  eventoData: '',
+  expiraEm: '',
+})
+
+const proximosEventos = computed(() => {
+  const agora = Date.now()
+  return eventos.value
+    .filter((e) => e.dataHora && new Date(e.dataHora).getTime() >= agora)
+    .slice()
+    .sort((a, b) => new Date(a.dataHora).getTime() - new Date(b.dataHora).getTime())
+})
+
+function formatDateTime(value) {
+  if (!value) return '—'
+  const d = new Date(value)
+  if (Number.isNaN(d.getTime())) return '—'
+  return d.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+}
+
+async function gerarQrCodeEvento() {
+  if (!eventoSelecionadoId.value) return
+  gerandoQrCode.value = true
+  qrCodeError.value = ''
+  qrDataUrl.value = ''
+  try {
+    const resultado = await gerarQrCode(eventoSelecionadoId.value)
+    qrCodeInfo.eventoTitulo = resultado.eventoTitulo
+    qrCodeInfo.eventoData = resultado.eventoData
+    qrCodeInfo.expiraEm = resultado.expiraEm
+    qrDataUrl.value = await QRCode.toDataURL(resultado.token)
+  } catch (err) {
+    qrCodeError.value = err.message || 'Não foi possível gerar o QR code. Tente novamente.'
+  } finally {
+    gerandoQrCode.value = false
+  }
+}
+
+async function loadEventosDisponiveis() {
+  loadingEventos.value = true
+  await fetchEventos()
+  loadingEventos.value = false
+  if (proximosEventos.value.length > 0 && !eventoSelecionadoId.value) {
+    eventoSelecionadoId.value = proximosEventos.value[0].id
+  }
+}
+
+// ---------- Meus Selos ----------
+const loadingSelos = ref(true)
+const selosError = ref('')
+const totalSelos = ref(0)
+const historicoSelos = ref([])
+const METAS_SELOS = 10
+
+const progressoSelos = computed(() => {
+  const pct = Math.min(100, Math.round((totalSelos.value / METAS_SELOS) * 100))
+  return Number.isFinite(pct) ? pct : 0
+})
+
+async function loadMeusSelos() {
+  loadingSelos.value = true
+  selosError.value = ''
+  try {
+    const data = await fetchMeusSelos()
+    totalSelos.value = data.totalSelos
+    historicoSelos.value = data.historico
+  } catch (err) {
+    selosError.value = err.message || 'Não foi possível carregar seus selos. Tente novamente mais tarde.'
+  } finally {
+    loadingSelos.value = false
+  }
+}
+
+onMounted(() => {
+  loadPortalData()
+  loadEventosDisponiveis()
+  loadMeusSelos()
+})
 </script>
 
 <template>
@@ -364,6 +453,91 @@ onMounted(loadPortalData)
               <span class="btn-label">Trocar Conta</span>
             </button>
           </div>
+        </div>
+
+        <!-- Meu QR Code do Jogo -->
+        <div class="card p-6">
+          <p class="font-display text-lg tracking-wide">Meu QR Code do Jogo</p>
+          <p class="mt-1 text-xs text-white/50">Gere seu QR code exclusivo para o check-in na entrada do evento.</p>
+
+          <p v-if="loadingEventos" class="mt-4 text-sm text-white/50">Carregando eventos...</p>
+
+          <div v-else-if="proximosEventos.length === 0" class="mt-4 border-2 border-white/10 bg-white/[0.02] p-4 text-sm text-white/50">
+            Nenhum jogo futuro disponível no momento. Volte em breve para gerar seu QR code.
+          </div>
+
+          <div v-else class="mt-4 space-y-4">
+            <div>
+              <label class="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-white/50">Evento</label>
+              <select
+                v-model="eventoSelecionadoId"
+                class="w-full border-2 border-white/15 bg-white/5 px-4 py-3 text-sm text-white outline-none transition focus:border-fenix-orange/60 focus:bg-white/10"
+              >
+                <option v-for="e in proximosEventos" :key="e.id" :value="e.id" class="bg-fenix-black">
+                  {{ e.titulo }} &middot; {{ formatDateTime(e.dataHora) }}
+                </option>
+              </select>
+            </div>
+
+            <button
+              type="button"
+              class="btn-fire w-full !py-3 !text-sm"
+              :disabled="gerandoQrCode || !eventoSelecionadoId"
+              @click="gerarQrCodeEvento"
+            >
+              <span class="btn-label">{{ gerandoQrCode ? 'Gerando...' : 'Gerar QR Code' }}</span>
+            </button>
+
+            <p v-if="qrCodeError" class="text-sm text-fenix-red">{{ qrCodeError }}</p>
+
+            <div v-if="qrDataUrl" class="flex flex-col items-center gap-3 border-2 border-white/10 bg-white/[0.02] p-4 text-center">
+              <div class="flex h-40 w-40 items-center justify-center border-2 border-black bg-white p-2">
+                <img :src="qrDataUrl" alt="QR code de check-in" class="h-full w-full object-contain" />
+              </div>
+              <div>
+                <p class="text-sm font-semibold text-white">{{ qrCodeInfo.eventoTitulo }}</p>
+                <p class="text-xs text-white/50">{{ formatDateTime(qrCodeInfo.eventoData) }}</p>
+                <p class="mt-2 text-[11px] uppercase tracking-wide text-white/40">
+                  Válido até {{ formatDateTime(qrCodeInfo.expiraEm) }}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Meus Selos -->
+        <div class="card p-6">
+          <div class="flex items-center justify-between">
+            <p class="font-display text-lg tracking-wide">Meus Selos</p>
+            <span class="-skew-x-6 border-2 border-fenix-orange/40 bg-fenix-orange/10 px-3 py-1 text-xs font-bold uppercase text-fenix-orange">
+              {{ loadingSelos ? '...' : `${totalSelos} / ${METAS_SELOS}` }}
+            </span>
+          </div>
+
+          <p v-if="selosError" class="mt-4 text-sm text-fenix-red">{{ selosError }}</p>
+
+          <template v-else>
+            <div class="mt-4 h-3 w-full overflow-hidden border-2 border-white/10 bg-white/5">
+              <div
+                class="h-full bg-fenix-orange transition-all duration-500"
+                :style="{ width: progressoSelos + '%' }"
+              />
+            </div>
+            <p class="mt-2 text-xs text-white/50">
+              Acumule selos comparecendo aos jogos e troque por kit torcedor ou concorra a sorteios.
+            </p>
+
+            <p v-if="loadingSelos" class="mt-4 text-sm text-white/50">Carregando selos...</p>
+            <p v-else-if="historicoSelos.length === 0" class="mt-4 text-sm text-white/50">
+              Você ainda não possui selos. Compareça a um jogo e peça para bipar seu QR code!
+            </p>
+            <ul v-else class="mt-4 space-y-3">
+              <li v-for="selo in historicoSelos" :key="selo.id" class="border-2 border-white/10 bg-white/[0.02] p-3">
+                <p class="text-sm font-semibold text-white">{{ selo.eventoTitulo }}</p>
+                <p class="text-xs text-white/50">{{ formatDate(selo.eventoData) }} &middot; check-in em {{ formatDateTime(selo.dataHoraCheckIn) }}</p>
+              </li>
+            </ul>
+          </template>
         </div>
 
         <!-- Editar Perfil (inline) -->
