@@ -1,4 +1,4 @@
-const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5004/api'
+const BASE_URL = import.meta.env.VITE_API_URL || '=https://fenix-unip-back.onrender.com/api'
 
 const ADMIN_TOKEN_KEY = 'fenix-admin-token'
 const USER_TOKEN_KEY = 'fenix-auth-token'
