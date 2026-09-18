@@ -8,6 +8,9 @@ import AdminEventos from './AdminEventos.vue'
 import AdminModalidades from './AdminModalidades.vue'
 import AdminTryouts from './AdminTryouts.vue'
 import AdminSugestoes from './AdminSugestoes.vue'
+import AdminCheckIn from './AdminCheckIn.vue'
+import AdminSelosRanking from './AdminSelosRanking.vue'
+import AdminUsuarios from './AdminUsuarios.vue'
 
 const router = useRouter()
 const { logout } = useAdminAuth()
@@ -19,6 +22,9 @@ const tabs = [
   { id: 'modalidades', label: 'Modalidades', component: AdminModalidades },
   { id: 'seletivas', label: 'Seletivas', component: AdminTryouts },
   { id: 'sugestoes', label: 'Sugestões', component: AdminSugestoes },
+  { id: 'checkin', label: 'Check-in QR', component: AdminCheckIn },
+  { id: 'selos', label: 'Ranking Selos', component: AdminSelosRanking },
+  { id: 'usuarios', label: 'Usuários', component: AdminUsuarios },
 ]
 
 const activeTab = ref('jornal')
